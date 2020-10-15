@@ -6,7 +6,7 @@ const sm = require('sitemap')
 const globby = require('globby')
 
 module.exports = async function makeSitemap(opts = {}) {
-  const { distPath, fileName, homepage, exclude, prettyURLs, failPlugin } = opts
+  const { distPath, fileName, homepage, exclude, prettyURLs, trailingSlash, failBuild } = opts
   const htmlFiles = `${distPath}/**/**.html`
   const excludeFiles = (exclude || []).map((filePath) => {
     return `!${filePath.replace(/^!/, '')}`
@@ -18,11 +18,16 @@ module.exports = async function makeSitemap(opts = {}) {
     let urlPath = file.startsWith(distPath) ? file.replace(distPath, '') : distPath
     if (prettyURLs) {
       urlPath = urlPath.replace(/\/index\.html$/, '').replace(/\.html$/, '')
+
+      if (trailingSlash) {
+        urlPath += urlPath.endsWith("/") ? "" : "/";
+      }
     }
+
     return {
       url: urlPath,
-      changefreq: 'weekly',
-      priority: 0.8,
+      changefreq: opts.changeFreq || 'weekly',
+      priority: opts.priority || 0.8,
       lastmodrealtime: true,
       lastmodfile: file,
     }

@@ -21,7 +21,7 @@ test.serial('Creates Sitemap with all html files', async (t) => {
       homepage: 'https://site.com/',
       distPath: BUILDPATH,
       prettyURLs: true,
-      failPlugin() {},
+      failBuild() {},
     })
     xmlData = await parseXml(SITEMAP_OUTPUT)
   } catch (err) {
@@ -41,6 +41,35 @@ test.serial('Creates Sitemap with all html files', async (t) => {
   ])
 })
 
+test.serial("Creates Sitemap with all html files with trailing slash", async t => {
+  let xmlData;
+  let sitemapData = {};
+  try {
+    sitemapData = await makeSitemap({
+      homepage: "https://site.com/",
+      distPath: BUILDPATH,
+      prettyURLs: true,
+      trailingSlash: true,
+      failBuild() {},
+    });
+    xmlData = await parseXml(SITEMAP_OUTPUT);
+  } catch (err) {
+    console.log(err);
+  }
+  const pages = getPages(xmlData);
+  t.truthy(sitemapData.sitemapPath);
+  t.deepEqual(pages, [
+    "https://site.com/",
+    "https://site.com/page-one/",
+    "https://site.com/page-three/",
+    "https://site.com/page-two/",
+    "https://site.com/children/child-one/",
+    "https://site.com/children/child-two/",
+    "https://site.com/children/grandchildren/grandchild-one/",
+    "https://site.com/children/grandchildren/grandchild-two/",
+  ]);
+});
+
 test.serial('Sitemap pretty urls off works correctly', async (t) => {
   let xmlData
   let sitemapData = {}
@@ -49,7 +78,7 @@ test.serial('Sitemap pretty urls off works correctly', async (t) => {
       homepage: 'https://site.com/',
       distPath: BUILDPATH,
       prettyURLs: false,
-      failPlugin() {},
+      failBuild() {},
     })
     xmlData = await parseXml(SITEMAP_OUTPUT)
   } catch (err) {
@@ -84,7 +113,7 @@ test.serial('Sitemap exclude works correctly', async (t) => {
         // Glob pattern
         '**/**/child-one.html'
       ],
-      failPlugin() {},
+      failBuild() {},
     })
     xmlData = await parseXml(path.resolve(BUILDPATH, 'sitemap.xml'))
   } catch (err) {
@@ -102,6 +131,48 @@ test.serial('Sitemap exclude works correctly', async (t) => {
     'https://site.com/children/grandchildren/grandchild-one',
     // excluded 'https://site.com/children/grandchildren/grandchild-two.html'
   ])
+})
+
+test.serial('Sitemap applies changeFreq and priority when configured', async (t) => {
+  let xmlData
+  const defaultChangeFreq = "daily";
+  const defaultPriority = 0.9;
+
+  try {
+    await makeSitemap({
+      homepage: 'https://site.com/',
+      distPath: BUILDPATH,
+      prettyURLs: false,
+      failBuild() {},
+      changeFreq: defaultChangeFreq,
+      priority: defaultPriority,
+    })
+    xmlData = await parseXml(SITEMAP_OUTPUT)
+  } catch (err) {
+    console.log(err)
+  }
+
+  t.is(xmlData.urlset.url[0].changefreq[0], defaultChangeFreq);
+  t.is(xmlData.urlset.url[0].priority[0], defaultPriority.toString());
+})
+
+test.serial('Sitemap changefreq and priority defaults to weekly and 0.8', async (t) => {
+  let xmlData
+
+  try {
+    await makeSitemap({
+      homepage: 'https://site.com/',
+      distPath: BUILDPATH,
+      prettyURLs: false,
+      failBuild() {},
+    })
+    xmlData = await parseXml(SITEMAP_OUTPUT)
+  } catch (err) {
+    console.log(err)
+  }
+
+  t.is(xmlData.urlset.url[0].changefreq[0], 'weekly');
+  t.is(xmlData.urlset.url[0].priority[0], '0.8');
 })
 
 function getPages(data) {
